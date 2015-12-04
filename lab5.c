@@ -358,8 +358,8 @@ void display()
   glEnableVertexAttribArray(c0);
   glEnableVertexAttribArray(c2);
 
-  glm::mat4 view = glm::lookAt(glm::vec3(15, 15, 1), 
-                               glm::vec3(0.0, 0.0, 0.0), 
+  glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 0), 
+                               glm::vec3(0.0, -1.0, 0.0), 
                                glm::vec3(0.0, 0.0, 1.0));
   
   glm::mat4 projection = glm::perspective(glm::radians(60.0f),1.0f,.01f,100.0f); 

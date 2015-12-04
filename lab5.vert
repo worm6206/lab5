@@ -2,7 +2,6 @@
 attribute vec4 position; 
 attribute vec4 normal; 
 
-varying vec4 pcolor;
 varying vec3 N;
 varying vec3 L;
 varying vec3 R;
