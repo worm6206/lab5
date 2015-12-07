@@ -39,12 +39,7 @@ typedef struct
   float tex[3];
 } Vertex; 
 
-typedef struct 
-{
-  float location[4]; 
-  float normal[4]; 
-  float color[4]; 
-} CCC; 
+
 
 
 
@@ -149,7 +144,7 @@ bool load_cube_map_side (
   }
   
   // copy image data into 'target' side of cube map
-  glTexImage2D (side_target,0,GL_RGBA,2048,2048,0,GL_RGBA,GL_UNSIGNED_BYTE,image_data);
+  glTexImage2D (side_target,0,GL_RGBA,x,y,0,GL_RGBA,GL_UNSIGNED_BYTE,image_data);
   free (image_data);
   return true;
 }
@@ -176,9 +171,9 @@ void MapVBO(){
 
 	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_REPEAT);
-	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
@@ -216,11 +211,11 @@ void INTtexture(){
 }
 
 
-Vertex *SQ;
+Vertex SQ[4];
 GLubyte SQindices[6];
+	// SQ = new Vertex[4];
 
 void SQvalues(){
-	SQ = new Vertex[4];
 	//location
 	SQ[0].location[0] = -0.5;
 	SQ[0].location[1] = -0.5;
@@ -260,17 +255,17 @@ void SQvalues(){
 	SQ[0].normal[3] = SQ[1].normal[3] = SQ[2].normal[3] = SQ[3].normal[3] = 0;
 
 	//tex
-	SQ[0].tex[0] = -0.5;
-	SQ[0].tex[1] = -0.5;
+	SQ[0].tex[0] = -1;
+	SQ[0].tex[1] = -1;
 
-	SQ[1].tex[0] = 0.5;
-	SQ[1].tex[1] = -0.5;
+	SQ[1].tex[0] = 1;
+	SQ[1].tex[1] = -1;
 
-	SQ[2].tex[0] = 0.5;
-	SQ[2].tex[1] = 0.5;
+	SQ[2].tex[0] = 1;
+	SQ[2].tex[1] = 1;
 
-	SQ[3].tex[0] = -0.5;
-	SQ[3].tex[1] = 0.5;
+	SQ[3].tex[0] = -1;
+	SQ[3].tex[1] = 1;
 
 	SQ[0].tex[2] =SQ[1].tex[2] =SQ[2].tex[2] =SQ[3].tex[2] = 1;
 
@@ -281,6 +276,130 @@ void SQvalues(){
 	SQindices[3] = 0;
 	SQindices[4] = 2;
 	SQindices[5] = 3;
+}
+
+Vertex *cubedata;
+GLubyte tindices[36]; 
+
+void cubeValue(){
+
+  /*
+  So this part is about defining cube's endpoints and their normals.
+  I thought that one point can be included in 3 planes, which are facing different axis, thus should have
+  differnt normal. So below is what it's about. The result is better than professor Shen's implementation,
+  but not what I expected to be, didn't fix it due to time constrain.
+  */
+  //6planes * 4points form a plane = 24
+  cubedata = new Vertex[24];
+
+
+  cubedata[0].location[0] = cubedata[4].location[0] = cubedata[21].location[0] = -0.5; cubedata[0].location[1] = cubedata[4].location[1] = cubedata[21].location[1] = -0.5; 
+  cubedata[0].location[2] = cubedata[4].location[2] = cubedata[21].location[2] = -0.5; cubedata[0].location[3] = cubedata[4].location[3] = cubedata[21].location[3] = 1.0;
+
+  cubedata[1].location[0] = cubedata[5].location[0] =  cubedata[17].location[0] = 0.5; cubedata[1].location[1] = cubedata[5].location[1] = cubedata[17].location[1] = -0.5;
+  cubedata[1].location[2] = cubedata[5].location[2] = cubedata[17].location[2] = -0.5; cubedata[1].location[3] = cubedata[5].location[3] = cubedata[17].location[3] =  1.0;
+
+  cubedata[2].location[0] =  cubedata[8].location[0] =  cubedata[18].location[0] =  0.5; cubedata[2].location[1] =  cubedata[8].location[1] =  cubedata[18].location[1] =   0.5;
+  cubedata[2].location[2] = cubedata[8].location[2] = cubedata[18].location[2] = -0.5; cubedata[2].location[3] =  cubedata[8].location[3] =  cubedata[18].location[3] =  1.0;
+
+  cubedata[3].location[0] = cubedata[9].location[0] = cubedata[22].location[0] = -0.5; cubedata[3].location[1] =  cubedata[9].location[1] =  cubedata[22].location[1] =  0.5;
+  cubedata[3].location[2] = cubedata[9].location[2] = cubedata[22].location[2] = -0.5; cubedata[3].location[3] = cubedata[9].location[3] = cubedata[22].location[3] =  1.0;
+
+  cubedata[12].location[0] = cubedata[7].location[0] = cubedata[20].location[0] = -0.5; cubedata[12].location[1] = cubedata[7].location[1] = cubedata[20].location[1] = -0.5;
+  cubedata[12].location[2] =  cubedata[7].location[2] =  cubedata[20].location[2] =  0.5; cubedata[12].location[3] = cubedata[7].location[3] = cubedata[20].location[3] =  1.0;
+
+  cubedata[13].location[0] =  cubedata[6].location[0] = cubedata[16].location[0] =  0.5; cubedata[13].location[1] = cubedata[6].location[1] = cubedata[16].location[1] = -0.5;
+  cubedata[13].location[2] = cubedata[6].location[2] = cubedata[16].location[2] =  0.5; cubedata[13].location[3] = cubedata[6].location[3] = cubedata[16].location[3] =  1.0;
+
+  cubedata[14].location[0] = cubedata[11].location[0] = cubedata[19].location[0] =  0.5; cubedata[14].location[1] = cubedata[11].location[1] = cubedata[19].location[1] =  0.5;
+  cubedata[14].location[2] =  cubedata[11].location[2] =  cubedata[19].location[2] =  0.5; cubedata[14].location[3] = cubedata[11].location[3] = cubedata[19].location[3] =  1.0;
+
+  cubedata[15].location[0] = cubedata[10].location[0] = cubedata[23].location[0] = -0.5; cubedata[15].location[1] = cubedata[10].location[1] = cubedata[23].location[1] =  0.5;
+  cubedata[15].location[2] = cubedata[10].location[2] = cubedata[23].location[2] =  0.5; cubedata[15].location[3] = cubedata[10].location[3] = cubedata[23].location[3] =  1.0;
+
+
+
+  int xx=0;
+  //facing -z
+  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 0.0; 
+  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 0.0; 
+  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = -1.0; 
+  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
+  xx+=4;
+  //facing -y
+  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 0.0; 
+  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = -1.0; 
+  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 0.0; 
+  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
+  xx+=4;
+  //facing y
+  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 0.0; 
+  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 1.0; 
+  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 0.0; 
+  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
+  xx+=4;
+  //facing z
+  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 0.0; 
+  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 0.0; 
+  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 1.0; 
+  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
+  xx+=4;
+  //facing x
+  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 1.0; 
+  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 0.0; 
+  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 0.0; 
+  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
+  xx+=4;
+  //facing -x
+  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = -1.0; 
+  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 0.0; 
+  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 0.0; 
+  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
+    //0~23
+  int yy=0; int zz=0;
+  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
+  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
+  yy+=4;
+  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
+  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
+  yy+=4;
+  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
+  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
+  yy+=4;
+  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
+  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
+  yy+=4;
+  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
+  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
+  yy+=4;
+  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
+  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
+
+  //tex
+  cubedata[0].tex[0] = cubedata[4].tex[0] = cubedata[21].tex[0] = -1; cubedata[0].tex[1] = cubedata[4].tex[1] = cubedata[21].tex[1] = -1; 
+  cubedata[0].tex[2] = cubedata[4].tex[2] = cubedata[21].tex[2] = -1; 
+
+  cubedata[1].tex[0] = cubedata[5].tex[0] =  cubedata[17].tex[0] = 1; cubedata[1].tex[1] = cubedata[5].tex[1] = cubedata[17].tex[1] = -1;
+  cubedata[1].tex[2] = cubedata[5].tex[2] = cubedata[17].tex[2] = -1; 
+
+  cubedata[2].tex[0] =  cubedata[8].tex[0] =  cubedata[18].tex[0] =  1; cubedata[2].tex[1] =  cubedata[8].tex[1] =  cubedata[18].tex[1] =   1;
+  cubedata[2].tex[2] = cubedata[8].tex[2] = cubedata[18].tex[2] = -1; 
+
+  cubedata[3].tex[0] = cubedata[9].tex[0] = cubedata[22].tex[0] = -1; cubedata[3].tex[1] =  cubedata[9].tex[1] =  cubedata[22].tex[1] =  1;
+  cubedata[3].tex[2] = cubedata[9].tex[2] = cubedata[22].tex[2] = -1; 
+
+  cubedata[12].tex[0] = cubedata[7].tex[0] = cubedata[20].tex[0] = -1; cubedata[12].tex[1] = cubedata[7].tex[1] = cubedata[20].tex[1] = -1;
+  cubedata[12].tex[2] =  cubedata[7].tex[2] =  cubedata[20].tex[2] =  1; 
+
+  cubedata[13].tex[0] =  cubedata[6].tex[0] = cubedata[16].tex[0] =  1; cubedata[13].tex[1] = cubedata[6].tex[1] = cubedata[16].tex[1] = -1;
+  cubedata[13].tex[2] = cubedata[6].tex[2] = cubedata[16].tex[2] =  1; 
+
+  cubedata[14].tex[0] = cubedata[11].tex[0] = cubedata[19].tex[0] =  1; cubedata[14].tex[1] = cubedata[11].tex[1] = cubedata[19].tex[1] =  1;
+  cubedata[14].tex[2] =  cubedata[11].tex[2] =  cubedata[19].tex[2] =  1; 
+
+  cubedata[15].tex[0] = cubedata[10].tex[0] = cubedata[23].tex[0] = -1; cubedata[15].tex[1] = cubedata[10].tex[1] = cubedata[23].tex[1] =  1;
+  cubedata[15].tex[2] = cubedata[10].tex[2] = cubedata[23].tex[2] =  1; 
+
 }
 
 void SQVBO() 
@@ -323,111 +442,22 @@ void drawSQ(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuint
   	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, (char*)NULL+0); 
 
 }
-CCC *cubedata;
-GLubyte tindices[36]; 
 
 void InitCube_VBO() 
 {
 
-  /*
-  So this part is about defining cube's endpoints and their normals.
-  I thought that one point can be included in 3 planes, which are facing different axis, thus should have
-  differnt normal. So below is what it's about. The result is better than professor Shen's implementation,
-  but not what I expected to be, didn't fix it due to time constrain.
-  */
-  //6planes * 4points form a plane = 24
-  cubedata = new CCC[24];
-
-  cubedata[0].location[0] = cubedata[4].location[0] = cubedata[21].location[0] = -0.5; cubedata[0].location[1] = cubedata[4].location[1] = cubedata[21].location[1] = -0.5; 
-  cubedata[0].location[2] = cubedata[4].location[2] = cubedata[21].location[2] = -0.5; cubedata[0].location[3] = cubedata[4].location[3] = cubedata[21].location[3] = 1.0;
-
-  cubedata[1].location[0] = cubedata[5].location[0] =  cubedata[17].location[0] = 0.5; cubedata[1].location[1] = cubedata[5].location[1] = cubedata[17].location[1] = -0.5;
-  cubedata[1].location[2] = cubedata[5].location[2] = cubedata[17].location[2] = -0.5; cubedata[1].location[3] = cubedata[5].location[3] = cubedata[17].location[3] =  1.0;
-
-  cubedata[2].location[0] =  cubedata[8].location[0] =  cubedata[18].location[0] =  0.5; cubedata[2].location[1] =  cubedata[8].location[1] =  cubedata[18].location[1] =   0.5;
-  cubedata[2].location[2] = cubedata[8].location[2] = cubedata[18].location[2] = -0.5; cubedata[2].location[3] =  cubedata[8].location[3] =  cubedata[18].location[3] =  1.0;
-
-  cubedata[3].location[0] = cubedata[9].location[0] = cubedata[22].location[0] = -0.5; cubedata[3].location[1] =  cubedata[9].location[1] =  cubedata[22].location[1] =  0.5;
-  cubedata[3].location[2] = cubedata[9].location[2] = cubedata[22].location[2] = -0.5; cubedata[3].location[3] = cubedata[9].location[3] = cubedata[22].location[3] =  1.0;
-
-  cubedata[12].location[0] = cubedata[7].location[0] = cubedata[20].location[0] = -0.5; cubedata[12].location[1] = cubedata[7].location[1] = cubedata[20].location[1] = -0.5;
-  cubedata[12].location[2] =  cubedata[7].location[2] =  cubedata[20].location[2] =  0.5; cubedata[12].location[3] = cubedata[7].location[3] = cubedata[20].location[3] =  1.0;
-
-  cubedata[13].location[0] =  cubedata[6].location[0] = cubedata[16].location[0] =  0.5; cubedata[13].location[1] = cubedata[6].location[1] = cubedata[16].location[1] = -0.5;
-  cubedata[13].location[2] = cubedata[6].location[2] = cubedata[16].location[2] =  0.5; cubedata[13].location[3] = cubedata[6].location[3] = cubedata[16].location[3] =  1.0;
-
-  cubedata[14].location[0] = cubedata[11].location[0] = cubedata[19].location[0] =  0.5; cubedata[14].location[1] = cubedata[11].location[1] = cubedata[19].location[1] =  0.5;
-  cubedata[14].location[2] =  cubedata[11].location[2] =  cubedata[19].location[2] =  0.5; cubedata[14].location[3] = cubedata[11].location[3] = cubedata[19].location[3] =  1.0;
-
-  cubedata[15].location[0] = cubedata[10].location[0] = cubedata[23].location[0] = -0.5; cubedata[15].location[1] = cubedata[10].location[1] = cubedata[23].location[1] =  0.5;
-  cubedata[15].location[2] = cubedata[10].location[2] = cubedata[23].location[2] =  0.5; cubedata[15].location[3] = cubedata[10].location[3] = cubedata[23].location[3] =  1.0;
-
-  int xx=0;
-  //facing -z
-  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 0.0; 
-  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 0.0; 
-  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = -1.0; 
-  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
-  xx+=4;
-  //facing -y
-  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 0.0; 
-  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = -1.0; 
-  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 0.0; 
-  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
-  xx+=4;
-  //facing y
-  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 0.0; 
-  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 1.0; 
-  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 0.0; 
-  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
-  xx+=4;
-  //facing z
-  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 0.0; 
-  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 0.0; 
-  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 1.0; 
-  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
-  xx+=4;
-  //facing x
-  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = 1.0; 
-  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 0.0; 
-  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 0.0; 
-  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
-  xx+=4;
-  //facing -x
-  cubedata[xx].normal[0] = cubedata[xx+1].normal[0] = cubedata[xx+2].normal[0] = cubedata[xx+3].normal[0] = -1.0; 
-  cubedata[xx].normal[1] = cubedata[xx+1].normal[1] = cubedata[xx+2].normal[1] = cubedata[xx+3].normal[1] = 0.0; 
-  cubedata[xx].normal[2] = cubedata[xx+1].normal[2] = cubedata[xx+2].normal[2] = cubedata[xx+3].normal[2] = 0.0; 
-  cubedata[xx].normal[3] = cubedata[xx+1].normal[3] = cubedata[xx+2].normal[3] = cubedata[xx+3].normal[3] = 1.0;
-
+  cubeValue();
 
   glGenBuffers(1, &vboHandle[0]);   // create an interleaved VBO object
   glBindBuffer(GL_ARRAY_BUFFER, vboHandle[0]);   // bind the first handle 
 
   glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex)*24, cubedata, GL_STATIC_DRAW); // allocate space and copy the position data over
   glBindBuffer(GL_ARRAY_BUFFER, 0);   // clean up 
-  //0~23
-  int yy=0; int zz=0;
-  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
-  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
-  yy+=4;
-  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
-  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
-  yy+=4;
-  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
-  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
-  yy+=4;
-  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
-  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
-  yy+=4;
-  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
-  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
-  yy+=4;
-  tindices[zz++] = yy;   tindices[zz++] = yy+1;   tindices[zz++] = yy+2; 
-  tindices[zz++] = yy;   tindices[zz++] = yy+2;   tindices[zz++] = yy+3;
+
 
   glGenBuffers(1, &indexVBO[0]); 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[0]); 
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte)*(zz), tindices, GL_STATIC_DRAW);  // load the index data 
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte)*36, tindices, GL_STATIC_DRAW);  // load the index data 
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);  // clean up 
 
@@ -441,9 +471,10 @@ void draw_cube(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLu
   glBindBuffer(GL_ARRAY_BUFFER, vboHandle[0]); 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[0]);
 
-  glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, 48,(char*) NULL+0);  // position 
-  glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, 48,(char*) NULL+16); // normal 
-
+	glEnableVertexAttribArray(c1);
+	glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+0);  // position 
+	glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+16); // normal
+	glVertexAttribPointer(c1,3,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+48); // texture
   glm::mat4 normal_matrix = glm::inverse(local2eye);
   normal_matrix = glm::transpose(normal_matrix);
 
@@ -451,8 +482,8 @@ void draw_cube(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLu
   glUniformMatrix4fv(m2, 1, GL_FALSE, (float*) &local2eye[0][0]);   // pass the local2eye matrix
   glUniformMatrix4fv(m3, 1, GL_FALSE, (float*) &normal_matrix[0][0]);   // pass the normal matrix
   glUniformMatrix4fv(m4, 1, GL_FALSE, (float*) world2eye);   // pass the w2e matrix 
-
-  glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_BYTE, (char*)NULL+0); 
+  	
+  	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_BYTE, (char*)NULL+0); 
 }
 
 void display() 
@@ -534,59 +565,64 @@ void display()
   glUniform4f(Kd, 1, 1, 1, 1);  
   glm::mat4 cubeM = model;
 
-
-
-  //z
-
-  // glUniform4f(Kd, 0, 1, 1, 1);  
-  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
-  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  // cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
+  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 40.0));
   mvp = projection*view*cubeM;
   mv = view*cubeM;
-  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
+  draw_cube(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
+  // drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
 
-  // glUniform4f(Kd, 1, 0, 1, 1);  
-  cubeM = glm::translate(model,glm::vec3(0.0, 0.0, 20));
-  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
-  mvp = projection*view*cubeM;
-  mv = view*cubeM;
-  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
+  // //z
 
-  //x
-  // glUniform4f(Kd, 1, 1, 0, 1);  
-  cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
-  cubeM = glm::rotate(cubeM,glm::radians(90.0f),glm::vec3(0, 1, 0));
-  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
-  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
-  mvp = projection*view*cubeM;
-  mv = view*cubeM;
-  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
+  // // glUniform4f(Kd, 0, 1, 1, 1);  
+  // cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
+  // cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  // mvp = projection*view*cubeM;
+  // mv = view*cubeM;
+  // drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
 
-  // glUniform4f(Kd, 1, 0, 0, 1);  
-  cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
-  cubeM = glm::rotate(cubeM,glm::radians(90.0f),glm::vec3(0, 1, 0));
-  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, 20));
-  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
-  mvp = projection*view*cubeM;
-  mv = view*cubeM;
-  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
+  // // glUniform4f(Kd, 1, 0, 1, 1);  
+  // cubeM = glm::translate(model,glm::vec3(0.0, 0.0, 20));
+  // cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  // mvp = projection*view*cubeM;
+  // mv = view*cubeM;
+  // drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
 
-  //y
-  // glUniform4f(Kd, 0, 1, 0, 1);  
-  cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
-  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, 20));
-  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
-  mvp = projection*view*cubeM;
-  mv = view*cubeM;
-  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
+  // //x
+  // // glUniform4f(Kd, 1, 1, 0, 1);  
+  // cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
+  // cubeM = glm::rotate(cubeM,glm::radians(90.0f),glm::vec3(0, 1, 0));
+  // cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
+  // cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  // mvp = projection*view*cubeM;
+  // mv = view*cubeM;
+  // drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
 
-  // glUniform4f(Kd, 0, 0, 1, 1);  
-  cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
-  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
-  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
-  mvp = projection*view*cubeM;
-  mv = view*cubeM;
-  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
+  // // glUniform4f(Kd, 1, 0, 0, 1);  
+  // cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
+  // cubeM = glm::rotate(cubeM,glm::radians(90.0f),glm::vec3(0, 1, 0));
+  // cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, 20));
+  // cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  // mvp = projection*view*cubeM;
+  // mv = view*cubeM;
+  // drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
+
+  // //y
+  // // glUniform4f(Kd, 0, 1, 0, 1);  
+  // cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
+  // cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, 20));
+  // cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  // mvp = projection*view*cubeM;
+  // mv = view*cubeM;
+  // drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
+
+  // // glUniform4f(Kd, 0, 0, 1, 1);  
+  // cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
+  // cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
+  // cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  // mvp = projection*view*cubeM;
+  // mv = view*cubeM;
+  // drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
 
 
   glDisableClientState(GL_VERTEX_ARRAY); 
