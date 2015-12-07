@@ -26,18 +26,18 @@ void main() {
 	vec4 ambient = light_ambient * mat_ambient;
 	//diffuse
 	float NdotL = dot(N,L);
-	if (NdotL < 0.0) NdotL = 0.0;
+	//if (NdotL < 0.0) NdotL = 0.0;
 	vec4 diffuse = light_diffuse * mat_diffuse * NdotL;
 	//specular
 	float RdotV = dot(R,V);
-	if(RdotV < 0.0) RdotV = 0.0;
-	if(NdotL == 0.0) RdotV = 0.0;
+	//if(RdotV < 0.0) RdotV = 0.0;
+	//if(NdotL == 0.0) RdotV = 0.0;
 	vec4 specular = pow(RdotV,mat_shine) * light_specular * mat_specular;
 	vec4 ggg = textureCube(Tex1,texC) ;
 
 	if(texture==1)
-		gl_FragColor = ggg* (diffuse + ambient + specular);
+		gl_FragColor = ggg;
 	else
-    	gl_FragColor = diffuse + ambient + specular;
+    		gl_FragColor = diffuse + ambient + specular;
 	
  } 

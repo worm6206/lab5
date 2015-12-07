@@ -6,6 +6,7 @@
 #include <stack> 
 #include <math.h> 
 #include <string> 
+#include "ply.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -37,15 +38,35 @@ typedef struct
   float normal[4]; 
   float color[4]; 
   float tex[3];
-} Vertex; 
+} VertexWithTex; 
+
+
+typedef struct {
+  float x, y, z;
+  float nx, ny, nz;
+} Vertex;
+
+typedef struct Face {
+  unsigned int count;
+  unsigned int *vertices;
+  float nx, ny, nz;
+} Face;
+
+char* string_list[] = {
+  "x", "y", "z", "nx", "ny", "nz", "vertex_indices"
+};
+
+Vertex** vertices = 0;
+Face** faces = 0;
+unsigned int vertexcount;
+unsigned int facecount;
+int vertexnormals = 0;
+int facenormals = 0;
 
 
 
-
-
-
-GLuint vboHandle[2];   
-GLuint indexVBO[2];
+GLuint vboHandle[3];   
+GLuint indexVBO[3];
 
 GLubyte readImage[400][400][4]; 
 GLubyte texImage[256][256][4]; 
@@ -62,10 +83,10 @@ stack<glm::mat4> mat_stack;
 GLfloat light_ambient[4] = {0.8,0.8,0.8,1};  //Ia 
 GLfloat light_diffuse[4] = {0.8,0.8,0.8,1};  //Id
 GLfloat light_specular[4] = {1,1,1,1};  //Is
-GLfloat light_pos [4] = {0, 0, 0, 1};
+GLfloat light_pos [4] = {4, 4, 1.8, 1};
 
 
-GLfloat mat_ambient[4] = {1,1,1,1};  //Ka 
+GLfloat mat_ambient[4] = {0.5,0.5,0.5,1};  //Ka 
 GLfloat mat_diffuse[4] = {0.8,0.8,0,1};  //Kd
 GLfloat mat_specular[4] = {1,1,1,1};  //Ks
 GLfloat mat_shine[1] = {10}; 
@@ -82,6 +103,201 @@ float x_angle = 0.0;
 float scale_size = 1;
 
 bool WIRE_FRAME =false; 
+
+void store_ply(PlyFile* input, Vertex ***vertices, Face ***faces,
+	       unsigned int* vertexcount, unsigned int* facecount,
+	       int* vertexnormals, int* facenormals) {
+  int i, j;
+
+  // go through the element types
+  for(i = 0; i < input->num_elem_types; i = i + 1) {
+    int count;
+    
+    // setup the element for reading and get the element count
+    char* element = setup_element_read_ply(input, i, &count);
+
+    // get vertices
+    if(strcmp("vertex", element) == 0) {
+      *vertices = (Vertex**)malloc(sizeof(Vertex) * count);
+      *vertexcount = count;
+
+      // run through the properties and store them
+      for(j = 0; j < input->elems[i]->nprops; j = j + 1) {
+	PlyProperty* property = input->elems[i]->props[j];
+	PlyProperty setup;
+
+	if(strcmp("x", property->name) == 0 &&
+	   property->is_list == PLY_SCALAR) {
+
+	  setup.name = string_list[0];
+	  setup.internal_type = Float32;
+	  setup.offset = offsetof(Vertex, x);
+	  setup.count_internal = 0;
+	  setup.count_offset = 0;
+
+	  setup_property_ply(input, &setup);
+	}
+	else if(strcmp("y", property->name) == 0 &&
+		property->is_list == PLY_SCALAR) {
+
+	  setup.name = string_list[1];
+	  setup.internal_type = Float32;
+	  setup.offset = offsetof(Vertex, y);
+	  setup.count_internal = 0;
+	  setup.count_offset = 0;
+
+	  setup_property_ply(input, &setup);
+	}
+	else if(strcmp("z", property->name) == 0 &&
+		property->is_list == PLY_SCALAR) {
+
+	  setup.name = string_list[2];
+	  setup.internal_type = Float32;
+	  setup.offset = offsetof(Vertex, z);
+	  setup.count_internal = 0;
+	  setup.count_offset = 0;
+
+	  setup_property_ply(input, &setup);
+	}
+	else if(strcmp("nx", property->name) == 0 &&
+		property->is_list == PLY_SCALAR) {
+
+	  setup.name = string_list[3];
+	  setup.internal_type = Float32;
+	  setup.offset = offsetof(Vertex, nx);
+	  setup.count_internal = 0;
+	  setup.count_offset = 0;
+
+	  setup_property_ply(input, &setup);
+	  *vertexnormals = 1;
+	}
+	else if(strcmp("ny", property->name) == 0 &&
+		property->is_list == PLY_SCALAR) {
+
+	  setup.name = string_list[4];
+	  setup.internal_type = Float32;
+	  setup.offset = offsetof(Vertex, ny);
+	  setup.count_internal = 0;
+	  setup.count_offset = 0;
+
+	  setup_property_ply(input, &setup);
+	  *vertexnormals = 1;
+	}
+	else if(strcmp("nz", property->name) == 0 &&
+		property->is_list == PLY_SCALAR) {
+
+	  setup.name = string_list[5];
+	  setup.internal_type = Float32;
+	  setup.offset = offsetof(Vertex, nz);
+	  setup.count_internal = 0;
+	  setup.count_offset = 0;
+
+	  setup_property_ply(input, &setup);
+	  *vertexnormals = 1;
+	}
+	// dunno what it is
+	else {
+	  fprintf(stderr, "unknown property type found in %s: %s\n",
+		  element, property->name);
+	}
+      }
+
+      // do this if you want to grab the other data
+      // list_pointer = get_other_properties_ply
+      //                (input, offsetof(Vertex, struct_pointer));
+
+      // copy the data
+      for(j = 0; j < count; j = j + 1) {
+	(*vertices)[j] = (Vertex*)malloc(sizeof(Vertex));
+	
+	get_element_ply(input, (void*)((*vertices)[j]));
+      }
+    }
+    // get faces
+    else if(strcmp("face", element) == 0) {
+      *faces = (Face**)malloc(sizeof(Face) * count);
+      *facecount = count;
+
+      // run through the properties and store them
+      for(j = 0; j < input->elems[i]->nprops; j = j + 1) {
+	PlyProperty* property = input->elems[i]->props[j];
+	PlyProperty setup;
+
+	if(strcmp("vertex_indices", property->name) == 0 &&
+	   property->is_list == PLY_LIST) {
+
+	  setup.name = string_list[6];
+	  setup.internal_type = Uint32;
+	  setup.offset = offsetof(Face, vertices);
+	  setup.count_internal = Uint32;
+	  setup.count_offset = offsetof(Face, count);
+
+	  setup_property_ply(input, &setup);
+	}
+	else if(strcmp("nx", property->name) == 0 &&
+		property->is_list == PLY_SCALAR) {
+
+	  setup.name = string_list[3];
+	  setup.internal_type = Float32;
+	  setup.offset = offsetof(Face, nx);
+	  setup.count_internal = 0;
+	  setup.count_offset = 0;
+
+	  setup_property_ply(input, &setup);
+	  *facenormals = 1;
+	}
+	else if(strcmp("ny", property->name) == 0 &&
+		property->is_list == PLY_SCALAR) {
+
+	  setup.name = string_list[4];
+	  setup.internal_type = Float32;
+	  setup.offset = offsetof(Face, ny);
+	  setup.count_internal = 0;
+	  setup.count_offset = 0;
+
+	  setup_property_ply(input, &setup);
+	  *facenormals = 1;
+	}
+	else if(strcmp("nz", property->name) == 0 &&
+		property->is_list == PLY_SCALAR) {
+
+	  setup.name = string_list[5];
+	  setup.internal_type = Float32;
+	  setup.offset = offsetof(Face, nz);
+	  setup.count_internal = 0;
+	  setup.count_offset = 0;
+
+	  setup_property_ply(input, &setup);
+	  *facenormals = 1;
+	}
+	// dunno what it is
+	else {
+	  fprintf(stderr, "unknown property type found in %s: %s\n",
+		  element, property->name);
+	}
+      }
+	
+      // do this if you want to grab the other data
+      // list_pointer = get_other_properties_ply
+      //                (input, offsetof(Face, struct_pointer));
+      
+      // copy the data
+      for(j = 0; j < count; j = j + 1) {
+	(*faces)[j] = (Face*)malloc(sizeof(Face));
+	
+	get_element_ply(input, (void*)((*faces)[j]));
+      }
+    }
+    // who knows?
+    else {
+      fprintf(stderr, "unknown element type found: %s\n", element);
+    }
+  }
+
+  // if you want to grab the other data do this
+  // get_other_element_ply(input);
+}
+
 
 void read_Image() 
 {
@@ -181,39 +397,35 @@ void MapVBO(){
 }
 
 void INTtexture(){
-	glEnable(GL_TEXTURE_CUBE_MAP);
-	GLuint renderTex;
-	// GLuint gradientTex;
+	// glEnable(GL_TEXTURE_CUBE_MAP);
+	// GLuint renderTex;
+	GLuint gradientTex;
 	read_Image();
-	glGenTextures(1,&renderTex);
-	glActiveTexture(GL_TEXTURE0);
-	// glTexImage2D (GL_TEXTURE_2D,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
-	for (int i = 0; i < 6; i++)
-	{
-	glBindTexture (GL_TEXTURE_CUBE_MAP, renderTex);
-  	glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X+i,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
-	}
-
-	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-
-	// glGenTextures(1,&gradientTex);
-	// glActiveTexture(GL_TEXTURE1);
-	// glBindTexture (GL_TEXTURE_2D, gradientTex);
+	// glGenTextures(1,&renderTex);
+	// glActiveTexture(GL_TEXTURE0);
 	// glTexImage2D (GL_TEXTURE_2D,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
 
-	// glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	// glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	// glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+
+	glGenTextures(1,&gradientTex);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture (GL_TEXTURE_2D, gradientTex);
+	glTexImage2D (GL_TEXTURE_2D,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 
 
 }
 
 
-Vertex SQ[4];
+VertexWithTex SQ[4];
 GLubyte SQindices[6];
-	// SQ = new Vertex[4];
+	// SQ = new VertexWithTex[4];
 
 void SQvalues(){
 	//location
@@ -278,7 +490,7 @@ void SQvalues(){
 	SQindices[5] = 3;
 }
 
-Vertex *cubedata;
+VertexWithTex *cubedata;
 GLubyte tindices[36]; 
 
 void cubeValue(){
@@ -290,7 +502,7 @@ void cubeValue(){
   but not what I expected to be, didn't fix it due to time constrain.
   */
   //6planes * 4points form a plane = 24
-  cubedata = new Vertex[24];
+  cubedata = new VertexWithTex[24];
 
 
   cubedata[0].location[0] = cubedata[4].location[0] = cubedata[21].location[0] = -0.5; cubedata[0].location[1] = cubedata[4].location[1] = cubedata[21].location[1] = -0.5; 
@@ -408,7 +620,7 @@ void SQVBO()
 	glGenBuffers(1, &vboHandle[1]);   // create an interleaved VBO object
 	glBindBuffer(GL_ARRAY_BUFFER, vboHandle[1]);   // bind the first handle 
 
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex)*4, SQ, GL_STATIC_DRAW); // allocate space and copy the position data over
+	glBufferData(GL_ARRAY_BUFFER, sizeof(VertexWithTex)*4, SQ, GL_STATIC_DRAW); // allocate space and copy the position data over
 	glBindBuffer(GL_ARRAY_BUFFER, 0);   // clean up 
 
 	glGenBuffers(1, &indexVBO[1]); 
@@ -427,9 +639,9 @@ void drawSQ(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuint
 	glBindBuffer(GL_ARRAY_BUFFER, vboHandle[1]); 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[1]);
 	glEnableVertexAttribArray(c1);
-	glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+0);  // position 
-	glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+16); // normal
-	glVertexAttribPointer(c1,3,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+48); // texture
+	glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+0);  // position 
+	glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+16); // normal
+	glVertexAttribPointer(c1,3,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+48); // texture
 
   glm::mat4 normal_matrix = glm::inverse(local2eye);
   normal_matrix = glm::transpose(normal_matrix);
@@ -451,7 +663,7 @@ void InitCube_VBO()
   glGenBuffers(1, &vboHandle[0]);   // create an interleaved VBO object
   glBindBuffer(GL_ARRAY_BUFFER, vboHandle[0]);   // bind the first handle 
 
-  glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex)*24, cubedata, GL_STATIC_DRAW); // allocate space and copy the position data over
+  glBufferData(GL_ARRAY_BUFFER, sizeof(VertexWithTex)*24, cubedata, GL_STATIC_DRAW); // allocate space and copy the position data over
   glBindBuffer(GL_ARRAY_BUFFER, 0);   // clean up 
 
 
@@ -472,9 +684,9 @@ void draw_cube(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLu
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[0]);
 
 	glEnableVertexAttribArray(c1);
-	glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+0);  // position 
-	glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+16); // normal
-	glVertexAttribPointer(c1,3,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+48); // texture
+	glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+0);  // position 
+	glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+16); // normal
+	glVertexAttribPointer(c1,3,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+48); // texture
   glm::mat4 normal_matrix = glm::inverse(local2eye);
   normal_matrix = glm::transpose(normal_matrix);
 
@@ -486,11 +698,89 @@ void draw_cube(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLu
   	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_BYTE, (char*)NULL+0); 
 }
 
+VertexWithTex *PlyVertex;
+GLuint *PlyOrder;
+
+void PLYvalue(){
+
+	PlyVertex = new VertexWithTex[vertexcount];
+	PlyOrder = new GLuint[facecount*3];
+	for (int i = 0; i < vertexcount; i++)
+	{
+		PlyVertex[i].location[0] = vertices[i] ->x;
+		PlyVertex[i].location[1] = vertices[i] ->y;
+		PlyVertex[i].location[2] = vertices[i] ->z;
+		PlyVertex[i].location[3] = 1;
+
+		PlyVertex[i].normal[0] = vertices[i] ->nx;
+		PlyVertex[i].normal[1] = vertices[i] ->ny;
+		PlyVertex[i].normal[2] = vertices[i] ->nz;
+		PlyVertex[i].normal[3] = 0;
+
+		// cout << vertices[i] ->nx << ", " << vertices[i] ->ny << ", " << vertices[i] ->nz << endl;
+		// if((PlyVertex[i].normal[0]!=0) ||(PlyVertex[i].normal[1]!=0) ||(PlyVertex[i].normal[2]!=0)  )
+		// 	cout << "WO" << endl;
+
+
+		// PlyVertex[i].normal[0] = 1;
+		// PlyVertex[i].normal[1] = 0;
+		// PlyVertex[i].normal[2] = 0;
+		// PlyVertex[i].normal[3] = 0;
+
+	}
+	for (int j = 0; j < facecount; j++)
+	{
+		PlyOrder[j*3] = faces[j]->vertices[0];
+		PlyOrder[j*3+1] = faces[j]->vertices[1];
+		PlyOrder[j*3+2] = faces[j]->vertices[2];
+	}
+
+}
+
+void PLYVBO(){
+	PLYvalue();
+	glGenBuffers(1, &vboHandle[1]);   // create an interleaved VBO object
+	glBindBuffer(GL_ARRAY_BUFFER, vboHandle[1]);   // bind the first handle 
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(VertexWithTex)*vertexcount, PlyVertex, GL_STATIC_DRAW); // allocate space and copy the position data over
+	glBindBuffer(GL_ARRAY_BUFFER, 0);   // clean up 
+
+
+	glGenBuffers(1, &indexVBO[1]); 
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[1]); 
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*facecount*3, PlyOrder, GL_STATIC_DRAW);  // load the index data 
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);  // clean up 
+
+}
+
+void drawPLY(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuint c0, GLuint c1,
+		   GLuint c2, GLuint m1, GLuint m2, GLuint m3, GLuint m4)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, vboHandle[1]); 
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[1]);
+	glEnableVertexAttribArray(c1);
+	glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+0);  // position 
+	glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+16); // normal
+	glVertexAttribPointer(c1,3,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+48); // texture
+
+  glm::mat4 normal_matrix = glm::inverse(local2eye);
+  normal_matrix = glm::transpose(normal_matrix);
+
+  glUniformMatrix4fv(m1, 1, GL_FALSE, (float*) &local2clip[0][0]);   // pass the local2clip matrix
+  glUniformMatrix4fv(m2, 1, GL_FALSE, (float*) &local2eye[0][0]);   // pass the local2eye matrix
+  glUniformMatrix4fv(m3, 1, GL_FALSE, (float*) &normal_matrix[0][0]);   // pass the normal matrix
+  glUniformMatrix4fv(m4, 1, GL_FALSE, (float*) world2eye);   // pass the w2e matrix 
+  	
+  	glDrawElements(GL_TRIANGLES, facecount*3, GL_UNSIGNED_INT, (char*)NULL+0); 
+
+}
+
 void display() 
 { 
 
 ////
-  mat_shine[0] = 20;
+   mat_shine[0] = 10;
   glClearColor(0,0,0,1); 
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
@@ -510,6 +800,7 @@ void display()
   GLuint m2 = glGetUniformLocation(programObject, "local2eye");
   GLuint m3 = glGetUniformLocation(programObject, "normal_matrix");
   GLuint m4 = glGetUniformLocation(programObject, "world2eye");  
+  
 
   GLuint Ia = glGetUniformLocation(programObject, "light_ambient");
   GLuint Id = glGetUniformLocation(programObject, "light_diffuse");
@@ -553,24 +844,50 @@ void display()
 
   glm::mat4 mvp;
   glm::mat4 mv;
+  glm::mat4 cubeM = model, plyM = model;
+  int tex_loc;
 
+
+  //PLY
+  texture=0;
+  glUniform4f(Kd, 0, 0, 1, 1);  
+  
+  plyM = glm::translate(plyM,glm::vec3(-1.0, -1.0, 0.0));
+  plyM = glm::rotate(plyM, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
+  plyM = glm::rotate(plyM, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); 
+  plyM = glm::scale(plyM, glm::vec3(10.0, 10.0, 10.0));
+  mvp = projection*view*plyM;
+  mv = view*plyM;
+   drawPLY(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
+
+
+  glUniform4f(Kd, 0, 1, 1, 1);  
+  plyM = glm::translate(plyM,glm::vec3(0.3, 0.0, 0.0));
+  mvp = projection*view*plyM;
+  mv = view*plyM;
+   drawPLY(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
+
+
+  //draw_cube(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
 
 ///
   // Skybox
-
   texture = 1;
-  glUniform1i(tt, texture);
-  int tex_loc = glGetUniformLocation(programObject, "Tex1");
-  glUniform1i(tex_loc,0);
-  glUniform4f(Kd, 1, 1, 1, 1);  
-  glm::mat4 cubeM = model;
 
-  // cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
+  glUniform1i(tt, texture);
+   tex_loc = glGetUniformLocation(programObject, "Tex1");
+  glUniform1i(tex_loc,0);
+
+
+  glUniform4f(Kd, 1, 1, 1, 1);  
+
   cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 40.0));
   mvp = projection*view*cubeM;
   mv = view*cubeM;
   draw_cube(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
-  // drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
+
+ 
+
 
   // //z
 
@@ -722,6 +1039,20 @@ void mykey(unsigned char key, int x, int y)
 
 int main(int argc, char** argv) 
 { 
+  PlyFile* input;
+  FILE *realFile1 = fopen("bunny2.ply", "r");
+  FILE *realFile2 = fopen("dragon.ply", "r");
+
+  // get the ply structure and open the file
+  input = read_ply(realFile1);
+
+  // read in the data
+  store_ply(input, 
+	    &vertices, &faces, 
+	    &vertexcount, &facecount,
+	    &vertexnormals, &facenormals);
+  cout << "PLY Vertex: "<< vertexcount << endl;
+  cout << "PLY Faces: "<< facecount << endl;
 
   glutInit(&argc, argv); 
   glutInitDisplayMode(GLUT_RGB|GLUT_DOUBLE|GLUT_DEPTH); 
@@ -736,6 +1067,7 @@ int main(int argc, char** argv)
   glewInit(); 
 
   SQVBO();
+  PLYVBO();
   InitCube_VBO();
   programObject = SetupGLSL("lab5");  
   // INTtexture();
