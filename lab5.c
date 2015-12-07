@@ -65,7 +65,7 @@ GLfloat light_specular[4] = {1,1,1,1};  //Is
 GLfloat light_pos [4] = {0, 0, 0, 1};
 
 
-GLfloat mat_ambient[4] = {0.1,0.1,0.1,1};  //Ka 
+GLfloat mat_ambient[4] = {1,1,1,1};  //Ka 
 GLfloat mat_diffuse[4] = {0.8,0.8,0,1};  //Kd
 GLfloat mat_specular[4] = {1,1,1,1};  //Ks
 GLfloat mat_shine[1] = {10}; 
@@ -490,7 +490,7 @@ void display()
 { 
 
 ////
-
+  mat_shine[0] = 20;
   glClearColor(0,0,0,1); 
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
