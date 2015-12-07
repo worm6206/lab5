@@ -5,6 +5,8 @@
 #include <vector>
 #include <stack> 
 #include <math.h> 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 using namespace std; 
 
@@ -20,7 +22,6 @@ using namespace std;
 #endif
 #define GLM_FORCE_RADIANS
 
-using namespace std;
 
 #include<glm/glm.hpp> 
 #include<glm/gtx/transform.hpp>
@@ -33,17 +34,22 @@ typedef struct
   float location[4]; 
   float normal[4]; 
   float color[4]; 
+  float tex[2];
 } Vertex; 
 
-int nindices; 
-Vertex *cyverts;   
-Vertex *cubedata;
-GLuint *cindices; 
+typedef struct 
+{
+  float location[4]; 
+  float normal[4]; 
+  float color[4]; 
+} CCC; 
 
-GLubyte tindices[36];  
+
+
 
 GLuint vboHandle[2];   
-GLuint indexVBO[2]; 
+GLuint indexVBO[2];
+GLuint cube_tex; 
 
 GLubyte readImage[400][400][4]; 
 GLubyte texImage[256][256][4]; 
@@ -53,13 +59,14 @@ float angle3=0, angle4=0;
 
 glm::mat4 modelM = glm::mat4(1.0f); 
 
+int texture =0;
 stack<glm::mat4> mat_stack;
 
 
 GLfloat light_ambient[4] = {0.8,0.8,0.8,1};  //Ia 
 GLfloat light_diffuse[4] = {0.8,0.8,0.8,1};  //Id
 GLfloat light_specular[4] = {1,1,1,1};  //Is
-GLfloat light_pos [4] = {4, 4, 1.8, 1};
+GLfloat light_pos [4] = {0, 0, 0, 1};
 
 
 GLfloat mat_ambient[4] = {0.1,0.1,0.1,1};  //Ka 
@@ -104,66 +111,210 @@ void read_Image()
   for (int i=0; i<256; i++)
     for ( int j=0; j<256; j++) {
       if (i<height && j <width) {
-  texImage[i][j][0] = readImage[i][j][0]; 
-  texImage[i][j][1] = readImage[i][j][1];
-  texImage[i][j][2] = readImage[i][j][2];
-  texImage[i][j][3] = 255; 
+	texImage[i][j][0] = readImage[i][j][0]; 
+	texImage[i][j][1] = readImage[i][j][1];
+	texImage[i][j][2] = readImage[i][j][2];
+	texImage[i][j][3] = 255; 
       }
       else {
-        texImage[i][j][0] = 0; 
-  texImage[i][j][1] = 0; 
-  texImage[i][j][2] = 0; 
-  texImage[i][j][3] = 255; 
+      	texImage[i][j][0] = 0; 
+	texImage[i][j][1] = 0; 
+	texImage[i][j][2] = 0; 
+	texImage[i][j][3] = 255; 
       }
     }
   
   fclose(in); 
 }
 
-void InitCylinder_VBO(int nslices, int nstacks, float r, float g, float b) 
-{
+bool load_cube_map_side (
+  GLuint texture, GLenum side_target, const char* file_name
+) {
+  glBindTexture (GL_TEXTURE_CUBE_MAP, texture);
 
-  int nvertices = nslices * nstacks; 
-  cyverts = new Vertex[nvertices]; 
+  int x, y, n;
+  int force_channels = 4;
+  unsigned char*  image_data = stbi_load (
+    file_name, &x, &y, &n, force_channels);
+  if (!image_data) {
+    fprintf (stderr, "ERROR: could not load %s\n", file_name);
+    return false;
+  }
+  // non-power-of-2 dimensions check
+  if ((x & (x - 1)) != 0 || (y & (y - 1)) != 0) {
+    fprintf (
+      stderr, "WARNING: image %s is not power-of-2 dimensions\n", file_name
+    );
+  }
+  
+  // copy image data into 'target' side of cube map
+  glTexImage2D (side_target,0,GL_RGBA,x,y,0,GL_RGBA,GL_UNSIGNED_BYTE,image_data);
+  free (image_data);
+  return true;
+}
 
-  float Dangle = 2*M_PI/(float)(nslices-1); 
+void MapVBO(){
+	glEnable(GL_TEXTURE_CUBE_MAP);
+	glGenTextures (1, &cube_tex);
+	glActiveTexture (GL_TEXTURE1);
+	cout << cube_tex << endl;
+	glBindTexture (GL_TEXTURE_CUBE_MAP, cube_tex);
 
-  for (int j =0; j<nstacks; j++)
-    for (int i=0; i<nslices; i++) {
-      int idx = j*nslices + i; // mesh[j][i] 
-      float angle = Dangle * i; 
-      cyverts[idx].location[0] = cyverts[idx].normal[0] = cos(angle); 
-      cyverts[idx].location[1] = cyverts[idx].normal[1] = sin(angle); 
-      cyverts[idx].location[2] = j*1.0/(float)(nstacks-1); 
-      cyverts[idx].normal[2] = 0.0; 
-      cyverts[idx].location[3] = 1.0;  cyverts[idx].normal[3] = 0.0; 
-    }
+	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, "negz.jpg"));
+	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, "posz.jpg"));
+	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, "posy.jpg"));
+	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "negy.jpg"));
+	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "negx.jpg"));
+	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_X, "posx.jpg"));
+	for (int i = 0; i < 6; i++)
+	{
+  	glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X+i,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+	}
 
-  nindices = (nstacks-1)*2*(nslices+1); 
-  cindices = new GLuint[nindices]; 
-  int n = 0; 
-  for (int j =0; j<nstacks-1; j++)
-    for (int i=0; i<=nslices; i++) {
-      int mi = i % nslices;  
-      int idx = j*nslices + mi; // mesh[j][mi] 
-      int idx2 = (j+1) * nslices + mi; 
-      cindices[n++] = idx; 
-      cindices[n++] = idx2; 
-    }
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_REPEAT);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-  glGenBuffers(1, &vboHandle[1]);   // create an interleaved VBO object
-  glBindBuffer(GL_ARRAY_BUFFER, vboHandle[1]);   // bind the first handle 
-
-  glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex)*nvertices, cyverts, GL_STATIC_DRAW); // allocate space and copy the position data over
-  glBindBuffer(GL_ARRAY_BUFFER, 0);   // clean up 
-
-  glGenBuffers(1, &indexVBO[1]); 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[1]); 
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*nindices, cindices, GL_STATIC_DRAW);  // load the index data 
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);  // clean up 
 
 }
+
+void INTtexture(){
+	GLuint renderTex;
+	GLuint gradientTex;
+	read_Image();
+	glGenTextures(1,&renderTex);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture (GL_TEXTURE_2D, renderTex);
+	glTexImage2D (GL_TEXTURE_2D,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+
+	glGenTextures(1,&gradientTex);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture (GL_TEXTURE_2D, gradientTex);
+	glTexImage2D (GL_TEXTURE_2D,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+
+
+}
+
+
+Vertex *SQ;
+GLubyte SQindices[6];
+
+void SQvalues(){
+	SQ = new Vertex[4];
+	//location
+	SQ[0].location[0] = -0.5;
+	SQ[0].location[1] = -0.5;
+	SQ[0].location[2] = 0;
+
+	SQ[1].location[0] = 0.5;
+	SQ[1].location[1] = -0.5;
+	SQ[1].location[2] = 0;
+
+	SQ[2].location[0] = 0.5;
+	SQ[2].location[1] = 0.5;
+	SQ[2].location[2] = 0;
+
+	SQ[3].location[0] = -0.5;
+	SQ[3].location[1] = 0.5;
+	SQ[3].location[2] = 0;
+
+	SQ[0].location[3] = SQ[1].location[3] = SQ[2].location[3] = SQ[3].location[3] = 1;
+	
+	//normal
+	SQ[0].normal[0] = 0;
+	SQ[0].normal[1] = 0;
+	SQ[0].normal[2] = 1;
+
+	SQ[1].normal[0] = 0;
+	SQ[1].normal[1] = 0;
+	SQ[1].normal[2] = 1;
+
+	SQ[2].normal[0] = 0;
+	SQ[2].normal[1] = 0;
+	SQ[2].normal[2] = 1;
+
+	SQ[3].normal[0] = 0;
+	SQ[3].normal[1] = 0;
+	SQ[3].normal[2] = 1;
+
+	SQ[0].normal[3] = SQ[1].normal[3] = SQ[2].normal[3] = SQ[3].normal[3] = 0;
+
+	//tex
+	SQ[0].tex[0] = 0;
+	SQ[0].tex[1] = 0;
+
+	SQ[1].tex[0] = 1;
+	SQ[1].tex[1] = 0;
+
+	SQ[2].tex[0] = 1;
+	SQ[2].tex[1] = 1;
+
+	SQ[3].tex[0] = 0;
+	SQ[3].tex[1] = 1;
+
+	//order
+	SQindices[0] = 0;
+	SQindices[1] = 1;
+	SQindices[2] = 2;
+	SQindices[3] = 0;
+	SQindices[4] = 2;
+	SQindices[5] = 3;
+}
+
+void SQVBO() 
+{
+	SQvalues();
+	glGenBuffers(1, &vboHandle[1]);   // create an interleaved VBO object
+	glBindBuffer(GL_ARRAY_BUFFER, vboHandle[1]);   // bind the first handle 
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex)*4, SQ, GL_STATIC_DRAW); // allocate space and copy the position data over
+	glBindBuffer(GL_ARRAY_BUFFER, 0);   // clean up 
+
+	glGenBuffers(1, &indexVBO[1]); 
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[1]); 
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte)*6, SQindices, GL_STATIC_DRAW);  // load the index data 
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);  // clean up 
+
+} 
+
+
+
+void drawSQ(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuint c0, GLuint c1,
+		   GLuint c2, GLuint m1, GLuint m2, GLuint m3, GLuint m4)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, vboHandle[1]); 
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[1]);
+	glEnableVertexAttribArray(c1);
+	glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+0);  // position 
+	glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+16); // normal
+	glVertexAttribPointer(c1,2,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+48); // texture
+
+  glm::mat4 normal_matrix = glm::inverse(local2eye);
+  normal_matrix = glm::transpose(normal_matrix);
+
+  glUniformMatrix4fv(m1, 1, GL_FALSE, (float*) &local2clip[0][0]);   // pass the local2clip matrix
+  glUniformMatrix4fv(m2, 1, GL_FALSE, (float*) &local2eye[0][0]);   // pass the local2eye matrix
+  glUniformMatrix4fv(m3, 1, GL_FALSE, (float*) &normal_matrix[0][0]);   // pass the normal matrix
+  glUniformMatrix4fv(m4, 1, GL_FALSE, (float*) world2eye);   // pass the w2e matrix 
+  	
+  	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, (char*)NULL+0); 
+
+}
+CCC *cubedata;
+GLubyte tindices[36]; 
 
 void InitCube_VBO() 
 {
@@ -175,7 +326,7 @@ void InitCube_VBO()
   but not what I expected to be, didn't fix it due to time constrain.
   */
   //6planes * 4points form a plane = 24
-  cubedata = new Vertex[24];
+  cubedata = new CCC[24];
 
   cubedata[0].location[0] = cubedata[4].location[0] = cubedata[21].location[0] = -0.5; cubedata[0].location[1] = cubedata[4].location[1] = cubedata[21].location[1] = -0.5; 
   cubedata[0].location[2] = cubedata[4].location[2] = cubedata[21].location[2] = -0.5; cubedata[0].location[3] = cubedata[4].location[3] = cubedata[21].location[3] = 1.0;
@@ -273,7 +424,7 @@ void InitCube_VBO()
 } 
 
 
-void draw_cube(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuint c0,
+void draw_cube(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuint c0,GLuint c1,
 	       GLuint c2, GLuint m1, GLuint m2, GLuint m3, GLuint m4)
 {
 
@@ -294,29 +445,11 @@ void draw_cube(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLu
   glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_BYTE, (char*)NULL+0); 
 }
 
-void draw_cylinder(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,
-		    GLuint c0, GLuint c2, GLuint m1,
-		   GLuint m2, GLuint m3, GLuint m4)
-{
-  glBindBuffer(GL_ARRAY_BUFFER, vboHandle[1]); 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[1]);
-  glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, 48,(char*) NULL+0);  // position 
-  glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, 48,(char*) NULL+16); // normal
-
-  glm::mat4 normal_matrix = glm::inverse(local2eye);
-  normal_matrix = glm::transpose(normal_matrix);
-
-  glUniformMatrix4fv(m1, 1, GL_FALSE, (float*) &local2clip[0][0]);   // pass the local2clip matrix
-  glUniformMatrix4fv(m2, 1, GL_FALSE, (float*) &local2eye[0][0]);   // pass the local2eye matrix
-  glUniformMatrix4fv(m3, 1, GL_FALSE, (float*) &normal_matrix[0][0]);   // pass the normal matrix
-  glUniformMatrix4fv(m4, 1, GL_FALSE, (float*) world2eye);   // pass the w2e matrix 
-
-  glDrawElements(GL_TRIANGLE_STRIP, nindices, GL_UNSIGNED_INT, (char*) NULL+0); 
-
-}
-
 void display() 
 { 
+
+////
+
   glClearColor(0,0,0,1); 
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
@@ -329,7 +462,9 @@ void display()
   glUseProgram(programObject);
 
   GLuint c0 = glGetAttribLocation(programObject, "position");
+  GLuint c1 = glGetAttribLocation(programObject, "tex");
   GLuint c2 = glGetAttribLocation(programObject, "normal");
+
   GLuint m1 = glGetUniformLocation(programObject, "local2clip");
   GLuint m2 = glGetUniformLocation(programObject, "local2eye");
   GLuint m3 = glGetUniformLocation(programObject, "normal_matrix");
@@ -345,6 +480,10 @@ void display()
   GLuint Ks = glGetUniformLocation(programObject, "mat_specular");
   GLuint Shine = glGetUniformLocation(programObject, "mat_shine"); 
 
+  GLuint tt = glGetUniformLocation(programObject, "texture");  
+  texture =0;
+  glUniform1i(tt, texture);
+
   glUniform4f(Ia, light_ambient[0], light_ambient[1], light_ambient[2], light_ambient[3]);
   glUniform4f(Id, light_diffuse[0], light_diffuse[1], light_diffuse[2], light_diffuse[3]);
   glUniform4f(Is, light_specular[0], light_specular[1], light_specular[2], light_specular[3]);
@@ -358,8 +497,8 @@ void display()
   glEnableVertexAttribArray(c0);
   glEnableVertexAttribArray(c2);
 
-  glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 0), 
-                               glm::vec3(0.0, -1.0, 0.0), 
+  glm::mat4 view = glm::lookAt(glm::vec3(5, 5, 0.2), 
+                               glm::vec3(0.0, 0.0, 0.0), 
                                glm::vec3(0.0, 0.0, 1.0));
   
   glm::mat4 projection = glm::perspective(glm::radians(60.0f),1.0f,.01f,100.0f); 
@@ -370,43 +509,75 @@ void display()
   model = glm::scale(model, glm::vec3(scale_size, scale_size, scale_size));
 
 
+
   glm::mat4 mvp;
   glm::mat4 mv;
-  
-
-// light and floor
-
-  glm::mat4 lightM = model; 
-  lightM = glm::translate(lightM, glm::vec3(light_pos[0], light_pos[1], light_pos[2])); 
-  lightM = glm::scale(lightM, glm::vec3(0.5, 0.5, 0.5));
-
-  mvp = projection*view*lightM;
-  mv = view*lightM;
-
-  glUniform4f(Kd, 0.5, 1, 1, 1); 
-
-  draw_cube(mvp, mv, &view[0][0], c0, c2, m1, m2, m3, m4);
 
 
-// objects for lighting demo
 
-  mat_stack.push(modelM);
+  // Skybox
 
-  modelM = glm::translate(modelM, glm::vec3(0.0f, 0.0f, 0.0f));
-  
-  mat_stack.push(modelM);  
-  modelM = glm::scale(modelM, glm::vec3(25.0f, 25.0f, 25.0f));
-  mvp = projection*view*model*modelM;
-  mv = view*model*modelM;
-  
-  glUniform4f(Kd, 0, 0.2, 0.7, 1);   
-  draw_cube(mvp, mv, &view[0][0], c0, c2, m1, m2, m3, m4);  
-  
-  modelM = mat_stack.top();  mat_stack.pop();
+  texture = 1;
+  glUniform1i(tt, texture);
+  int tex_loc = glGetUniformLocation(programObject, "Tex1");
+  glUniform1i(tex_loc,0);
+  glUniform4f(Kd, 1, 1, 1, 1);  
+  glm::mat4 cubeM = model;
 
-  glEnable(GL_TEXTURE_2D);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256,0, GL_RGBA, GL_UNSIGNED_BYTE, texImage);
-  glDisable(GL_TEXTURE_2D);
+
+
+  //z
+
+  // glUniform4f(Kd, 0, 1, 1, 1);  
+  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
+  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  mvp = projection*view*cubeM;
+  mv = view*cubeM;
+  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
+
+  // glUniform4f(Kd, 1, 0, 1, 1);  
+  cubeM = glm::translate(model,glm::vec3(0.0, 0.0, 20));
+  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  mvp = projection*view*cubeM;
+  mv = view*cubeM;
+  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
+
+  //x
+  // glUniform4f(Kd, 1, 1, 0, 1);  
+  cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
+  cubeM = glm::rotate(cubeM,glm::radians(90.0f),glm::vec3(0, 1, 0));
+  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
+  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  mvp = projection*view*cubeM;
+  mv = view*cubeM;
+  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
+
+  // glUniform4f(Kd, 1, 0, 0, 1);  
+  cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
+  cubeM = glm::rotate(cubeM,glm::radians(90.0f),glm::vec3(0, 1, 0));
+  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, 20));
+  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  mvp = projection*view*cubeM;
+  mv = view*cubeM;
+  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
+
+  //y
+  // glUniform4f(Kd, 0, 1, 0, 1);  
+  cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
+  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, 20));
+  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  mvp = projection*view*cubeM;
+  mv = view*cubeM;
+  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);   
+
+  // glUniform4f(Kd, 0, 0, 1, 1);  
+  cubeM = glm::rotate(model,glm::radians(90.0f),glm::vec3(1, 0, 0));
+  cubeM = glm::translate(cubeM,glm::vec3(0.0, 0.0, -20));
+  cubeM = glm::scale(cubeM, glm::vec3(40.0, 40.0, 1.0));
+  mvp = projection*view*cubeM;
+  mv = view*cubeM;
+  drawSQ(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
+
 
   glDisableClientState(GL_VERTEX_ARRAY); 
 
@@ -418,43 +589,43 @@ void display()
 
 void mymotion(int x, int y)
 {
-    if (xform_mode==XFORM_ROTATE) {
-      z_angle += (x - press_x)/5.0; 
-      if (z_angle > 180) z_angle -= 360; 
-      else if (z_angle <-180) z_angle += 360; 
-      press_x = x; 
-           
-      x_angle -= (y - press_y)/5.0; 
-      if (x_angle > 180) x_angle -= 360; 
-      else if (x_angle <-180) x_angle += 360; 
-      press_y = y; 
-    }
-        else if (xform_mode == XFORM_SCALE){
-      float old_size = scale_size;
-      scale_size *= (1+ (y - press_y)/60.0); 
-      if (scale_size <0) scale_size = old_size; 
-      press_y = y; 
-    }
-    glutPostRedisplay(); 
+	if (xform_mode==XFORM_ROTATE) {
+	  z_angle += (x - press_x)/5.0; 
+	  if (z_angle > 180) z_angle -= 360; 
+	  else if (z_angle <-180) z_angle += 360; 
+	  press_x = x; 
+		   
+	  x_angle -= (y - press_y)/5.0; 
+	  if (x_angle > 180) x_angle -= 360; 
+	  else if (x_angle <-180) x_angle += 360; 
+	  press_y = y; 
+	}
+		else if (xform_mode == XFORM_SCALE){
+	  float old_size = scale_size;
+	  scale_size *= (1+ (y - press_y)/60.0); 
+	  if (scale_size <0) scale_size = old_size; 
+	  press_y = y; 
+	}
+	glutPostRedisplay(); 
 }
 void mymouse(int button, int state, int x, int y)
 {
   if (state == GLUT_DOWN) {
-    press_x = x; press_y = y; 
-    if (button == GLUT_LEFT_BUTTON)
-      xform_mode = XFORM_ROTATE; 
-         else if (button == GLUT_RIGHT_BUTTON) 
-      xform_mode = XFORM_SCALE; 
+	press_x = x; press_y = y; 
+	if (button == GLUT_LEFT_BUTTON)
+	  xform_mode = XFORM_ROTATE; 
+		 else if (button == GLUT_RIGHT_BUTTON) 
+	  xform_mode = XFORM_SCALE; 
   }
   else if (state == GLUT_UP) {
-          xform_mode = XFORM_NONE; 
+		  xform_mode = XFORM_NONE; 
   }
 }
 
 
 void mykey(unsigned char key, int x, int y)
 {
-        float d_angle = 10; 
+	float d_angle = 10; 
 	if (key == 'q') exit(1); 
 	if (key == 'R') 
 	  modelM = glm::rotate(modelM, glm::radians(d_angle), glm::vec3(0.0f, 0.0f, 1.0f)); 
@@ -475,28 +646,28 @@ void mykey(unsigned char key, int x, int y)
 	}
 
 	if (key == '1') {
-          angle1 += 5; 
-          // printf(" hello!\n"); 
-        }
-        if (key == '2') 
-          angle2 += 5;
-        if (key == '-') {
-          mat_shine[0] += 1;
+		  angle1 += 5; 
+		  // printf(" hello!\n"); 
+		}
+		if (key == '2') 
+		  angle2 += 5;
+		if (key == '-') {
+		  mat_shine[0] += 1;
 	  if (mat_shine[0] < 1) mat_shine[0] = 1; 
 	}
-        if (key == '=') 
-          mat_shine[0] -= 1; 	
-        if (key == '3') 
+		if (key == '=') 
+		  mat_shine[0] -= 1;    
+		if (key == '3') 
 	  light_pos[0] += 0.5; 
-        if (key == '4') 
+		if (key == '4') 
 	  light_pos[0] -= 0.5; 
-        if (key == '5') 
+		if (key == '5') 
 	  light_pos[1] += 0.5; 
-        if (key == '6') 
+		if (key == '6') 
 	  light_pos[1] -= 0.5; 
-        if (key == '7') 
+		if (key == '7') 
 	  light_pos[2] += 0.5; 
-        if (key == '8') 
+		if (key == '8') 
 	  light_pos[2] -= 0.5; 
 
 	
@@ -518,11 +689,11 @@ int main(int argc, char** argv)
 
   glewInit(); 
 
+  SQVBO();
   InitCube_VBO();
-
-  InitCylinder_VBO(10,10,1,1,0);
-
   programObject = SetupGLSL("lab5");  
+  INTtexture();
+  MapVBO();
 
   glutMainLoop(); 
 

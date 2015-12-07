@@ -1,6 +1,10 @@
+uniform int texture;
 
 attribute vec4 position; 
 attribute vec4 normal; 
+attribute vec2 tex;
+
+varying vec2 texC;
 
 varying vec3 N;
 varying vec3 L;
@@ -25,6 +29,7 @@ uniform float mat_shine;
 
 
 
+
 void main(){
 
 
@@ -38,4 +43,5 @@ void main(){
 
        R = normalize(reflect(-L, N)); 
        V = normalize(vec3(-Lpos)); 
+       texC = tex;
 }
