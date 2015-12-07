@@ -5,6 +5,8 @@
 #include <vector>
 #include <stack> 
 #include <math.h> 
+#include <string> 
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -34,7 +36,7 @@ typedef struct
   float location[4]; 
   float normal[4]; 
   float color[4]; 
-  float tex[2];
+  float tex[3];
 } Vertex; 
 
 typedef struct 
@@ -49,7 +51,6 @@ typedef struct
 
 GLuint vboHandle[2];   
 GLuint indexVBO[2];
-GLuint cube_tex; 
 
 GLubyte readImage[400][400][4]; 
 GLubyte texImage[256][256][4]; 
@@ -148,28 +149,30 @@ bool load_cube_map_side (
   }
   
   // copy image data into 'target' side of cube map
-  glTexImage2D (side_target,0,GL_RGBA,x,y,0,GL_RGBA,GL_UNSIGNED_BYTE,image_data);
+  glTexImage2D (side_target,0,GL_RGBA,2048,2048,0,GL_RGBA,GL_UNSIGNED_BYTE,image_data);
   free (image_data);
   return true;
 }
 
-void MapVBO(){
-	glEnable(GL_TEXTURE_CUBE_MAP);
-	glGenTextures (1, &cube_tex);
-	glActiveTexture (GL_TEXTURE1);
-	cout << cube_tex << endl;
-	glBindTexture (GL_TEXTURE_CUBE_MAP, cube_tex);
+GLuint cube_tex; 
 
-	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, "negz.jpg"));
-	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, "posz.jpg"));
-	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, "posy.jpg"));
-	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "negy.jpg"));
-	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "negx.jpg"));
-	// assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_X, "posx.jpg"));
-	for (int i = 0; i < 6; i++)
-	{
-  	glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X+i,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
-	}
+void MapVBO(){
+	// glEnable(GL_TEXTURE_CUBE_MAP);
+	glGenTextures (1, &cube_tex);
+	glActiveTexture (GL_TEXTURE0);
+	cout << cube_tex << endl;
+	// glBindTexture (GL_TEXTURE_CUBE_MAP, cube_tex);
+
+	assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, "negz.jpg"));
+	assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, "posz.jpg"));
+	assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, "posy.jpg"));
+	assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "negy.jpg"));
+	assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "negx.jpg"));
+	assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_X, "posx.jpg"));
+	// for (int i = 0; i < 6; i++)
+	// {
+ //  	glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X+i,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+	// }
 
 	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -183,25 +186,30 @@ void MapVBO(){
 }
 
 void INTtexture(){
+	glEnable(GL_TEXTURE_CUBE_MAP);
 	GLuint renderTex;
-	GLuint gradientTex;
+	// GLuint gradientTex;
 	read_Image();
 	glGenTextures(1,&renderTex);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture (GL_TEXTURE_2D, renderTex);
-	glTexImage2D (GL_TEXTURE_2D,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+	// glTexImage2D (GL_TEXTURE_2D,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+	for (int i = 0; i < 6; i++)
+	{
+	glBindTexture (GL_TEXTURE_CUBE_MAP, renderTex);
+  	glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X+i,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+	}
 
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 
-	glGenTextures(1,&gradientTex);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture (GL_TEXTURE_2D, gradientTex);
-	glTexImage2D (GL_TEXTURE_2D,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+	// glGenTextures(1,&gradientTex);
+	// glActiveTexture(GL_TEXTURE1);
+	// glBindTexture (GL_TEXTURE_2D, gradientTex);
+	// glTexImage2D (GL_TEXTURE_2D,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
 
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	// glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	// glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 
 
@@ -252,17 +260,19 @@ void SQvalues(){
 	SQ[0].normal[3] = SQ[1].normal[3] = SQ[2].normal[3] = SQ[3].normal[3] = 0;
 
 	//tex
-	SQ[0].tex[0] = 0;
-	SQ[0].tex[1] = 0;
+	SQ[0].tex[0] = -0.5;
+	SQ[0].tex[1] = -0.5;
 
-	SQ[1].tex[0] = 1;
-	SQ[1].tex[1] = 0;
+	SQ[1].tex[0] = 0.5;
+	SQ[1].tex[1] = -0.5;
 
-	SQ[2].tex[0] = 1;
-	SQ[2].tex[1] = 1;
+	SQ[2].tex[0] = 0.5;
+	SQ[2].tex[1] = 0.5;
 
-	SQ[3].tex[0] = 0;
-	SQ[3].tex[1] = 1;
+	SQ[3].tex[0] = -0.5;
+	SQ[3].tex[1] = 0.5;
+
+	SQ[0].tex[2] =SQ[1].tex[2] =SQ[2].tex[2] =SQ[3].tex[2] = 1;
 
 	//order
 	SQindices[0] = 0;
@@ -300,7 +310,7 @@ void drawSQ(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuint
 	glEnableVertexAttribArray(c1);
 	glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+0);  // position 
 	glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+16); // normal
-	glVertexAttribPointer(c1,2,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+48); // texture
+	glVertexAttribPointer(c1,3,GL_FLOAT, GL_FALSE, sizeof(Vertex),(char*) NULL+48); // texture
 
   glm::mat4 normal_matrix = glm::inverse(local2eye);
   normal_matrix = glm::transpose(normal_matrix);
@@ -514,7 +524,7 @@ void display()
   glm::mat4 mv;
 
 
-
+///
   // Skybox
 
   texture = 1;
@@ -692,7 +702,7 @@ int main(int argc, char** argv)
   SQVBO();
   InitCube_VBO();
   programObject = SetupGLSL("lab5");  
-  INTtexture();
+  // INTtexture();
   MapVBO();
 
   glutMainLoop(); 

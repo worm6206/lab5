@@ -1,6 +1,8 @@
+
+
 uniform int texture;
-uniform sampler2D Tex1;
-varying vec2 texC;
+uniform samplerCube Tex1;
+varying vec3 texC;
 
 varying vec3 N;
 varying vec3 L;
@@ -31,9 +33,10 @@ void main() {
 	if(RdotV < 0.0) RdotV = 0.0;
 	if(NdotL == 0.0) RdotV = 0.0;
 	vec4 specular = pow(RdotV,mat_shine) * light_specular * mat_specular;
+	vec4 ggg = textureCube(Tex1,texC) ;
 
 	if(texture==1)
-		gl_FragColor = texture2D(Tex1,texC) * (diffuse + ambient + specular);
+		gl_FragColor = ggg* (diffuse + ambient + specular);
 	else
     	gl_FragColor = diffuse + ambient + specular;
 	

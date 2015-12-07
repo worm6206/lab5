@@ -2,9 +2,9 @@ uniform int texture;
 
 attribute vec4 position; 
 attribute vec4 normal; 
-attribute vec2 tex;
+attribute vec3 tex;
 
-varying vec2 texC;
+varying vec3 texC;
 
 varying vec3 N;
 varying vec3 L;
