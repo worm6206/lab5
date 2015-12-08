@@ -1185,9 +1185,27 @@ void mykey(unsigned char key, int x, int y)
 	glutPostRedisplay(); 
 }
 
+bool file_exists(const char * filename)
+{
+    if (FILE * file = fopen(filename, "r"))
+    {
+        fclose(file);
+        return true;
+    }
+    return false;
+}
+
+#define KRED  "\x1B[31m"
+#define RESET "\033[0m"
+
 int main(int argc, char** argv) 
 { 
   PlyFile* input;
+  if ((!file_exists("bunny2.ply"))||(!file_exists("dragon2.ply")))
+  {
+  	printf(KRED "%s\n" RESET, "Missing PLYs, please read \"readme.txt\"\n EXITING \n");
+  	return 0;
+  }
   FILE *realFile1 = fopen("bunny2.ply", "r");
   FILE *realFile2 = fopen("dragon2.ply", "r");
 

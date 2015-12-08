@@ -2,9 +2,9 @@
 
 Just run ./DoIt.sh
 
-it will extract dragon2.ply, delete the existing lab5 executable and compile a new one.
+it will delete the existing lab5 executable and compile a new one.
 
-I use my own dragon2.ply because I generated the nx,ny,nz for it. Please use my version of PLYs! Same goes to bunny2.ply
+I use my own ply because I generated the nx,ny,nz for it. Please use my version of PLYs!
 
 //What have I done?
 
