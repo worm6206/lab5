@@ -1188,7 +1188,7 @@ void mykey(unsigned char key, int x, int y)
 int main(int argc, char** argv) 
 { 
   PlyFile* input;
-  FILE *realFile1 = fopen("bunny.ply", "r");
+  FILE *realFile1 = fopen("bunny2.ply", "r");
   FILE *realFile2 = fopen("dragon2.ply", "r");
 
   // get the ply structure and open the file
