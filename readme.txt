@@ -21,6 +21,9 @@ bunny2.ply
 dragon2.ply
 - https://github.com/worm6206/lab5/raw/master/dragon2.ply
 
+OR just download the latest Lab project compressed file and unzip it
+- https://github.com/worm6206/lab5/archive/master.zip
+
 /////////////////////
 //What have I done?//
 /////////////////////
