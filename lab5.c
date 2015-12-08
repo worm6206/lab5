@@ -55,15 +55,20 @@ typedef struct Face {
 char* string_list[] = {
   "x", "y", "z", "nx", "ny", "nz", "vertex_indices"
 };
-
+////PLY1
 Vertex** vertices = 0;
 Face** faces = 0;
 unsigned int vertexcount;
 unsigned int facecount;
 int vertexnormals = 0;
 int facenormals = 0;
-
-
+///PLY2
+Vertex** vertices2 = 0;
+Face** faces2 = 0;
+unsigned int vertexcount2;
+unsigned int facecount2;
+int vertexnormals2 = 0;
+int facenormals2 = 0;
 
 GLuint vboHandle[3];   
 GLuint indexVBO[3];
@@ -380,6 +385,38 @@ void MapVBO(){
 	assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "negy.jpg"));
 	assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "negx.jpg"));
 	assert (load_cube_map_side (cube_tex, GL_TEXTURE_CUBE_MAP_POSITIVE_X, "posx.jpg"));
+	// for (int i = 0; i < 6; i++)
+	// {
+ //  	glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X+i,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
+	// }
+
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+
+}
+
+
+GLuint cube_tex2; 
+
+void MapVBO2(){
+	// glEnable(GL_TEXTURE_CUBE_MAP);
+	glGenTextures (1, &cube_tex2);
+	glActiveTexture (GL_TEXTURE1);
+	cout << cube_tex2 << endl;
+	// glBindTexture (GL_TEXTURE_CUBE_MAP, cube_tex);
+
+	assert (load_cube_map_side (cube_tex2, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, "O.jpg"));
+	assert (load_cube_map_side (cube_tex2, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, "O.jpg"));
+	assert (load_cube_map_side (cube_tex2, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, "O.jpg"));
+	assert (load_cube_map_side (cube_tex2, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "O.jpg"));
+	assert (load_cube_map_side (cube_tex2, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "O.jpg"));
+	assert (load_cube_map_side (cube_tex2, GL_TEXTURE_CUBE_MAP_POSITIVE_X, "O.jpg"));
 	// for (int i = 0; i < 6; i++)
 	// {
  //  	glTexImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X+i,0,GL_RGBA,256,256,0,GL_RGBA,GL_UNSIGNED_BYTE,texImage);
@@ -734,7 +771,44 @@ void PLYvalue(){
 		PlyOrder[j*3+1] = faces[j]->vertices[1];
 		PlyOrder[j*3+2] = faces[j]->vertices[2];
 	}
+}
 
+VertexWithTex *PlyVertex2;
+GLuint *PlyOrder2;
+
+void PLYvalue2(){
+
+	PlyVertex2 = new VertexWithTex[vertexcount2];
+	PlyOrder2 = new GLuint[facecount2*3];
+	for (int i = 0; i < vertexcount2; i++)
+	{
+		PlyVertex2[i].location[0] = vertices2[i] ->x;
+		PlyVertex2[i].location[1] = vertices2[i] ->y;
+		PlyVertex2[i].location[2] = vertices2[i] ->z;
+		PlyVertex2[i].location[3] = 1;
+
+		PlyVertex2[i].normal[0] = vertices2[i] ->nx;
+		PlyVertex2[i].normal[1] = vertices2[i] ->ny;
+		PlyVertex2[i].normal[2] = vertices2[i] ->nz;
+		PlyVertex2[i].normal[3] = 0;
+
+		// cout << vertices[i] ->nx << ", " << vertices[i] ->ny << ", " << vertices[i] ->nz << endl;
+		// if((PlyVertex[i].normal[0]!=0) ||(PlyVertex[i].normal[1]!=0) ||(PlyVertex[i].normal[2]!=0)  )
+		// 	cout << "WO" << endl;
+
+
+		// PlyVertex[i].normal[0] = 1;
+		// PlyVertex[i].normal[1] = 0;
+		// PlyVertex[i].normal[2] = 0;
+		// PlyVertex[i].normal[3] = 0;
+
+	}
+	for (int j = 0; j < facecount2; j++)
+	{
+		PlyOrder2[j*3] = faces2[j]->vertices[0];
+		PlyOrder2[j*3+1] = faces2[j]->vertices[1];
+		PlyOrder2[j*3+2] = faces2[j]->vertices[2];
+	}
 }
 
 void PLYVBO(){
@@ -751,7 +825,21 @@ void PLYVBO(){
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*facecount*3, PlyOrder, GL_STATIC_DRAW);  // load the index data 
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);  // clean up 
+}
+void PLYVBO2(){
+	PLYvalue2();
+	glGenBuffers(1, &vboHandle[2]);   // create an interleaved VBO object
+	glBindBuffer(GL_ARRAY_BUFFER, vboHandle[2]);   // bind the first handle 
 
+	glBufferData(GL_ARRAY_BUFFER, sizeof(VertexWithTex)*vertexcount2, PlyVertex2, GL_STATIC_DRAW); // allocate space and copy the position data over
+	glBindBuffer(GL_ARRAY_BUFFER, 0);   // clean up 
+
+
+	glGenBuffers(1, &indexVBO[2]); 
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[2]); 
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*facecount2*3, PlyOrder2, GL_STATIC_DRAW);  // load the index data 
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);  // clean up 
 }
 
 void drawPLY(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuint c0, GLuint c1,
@@ -773,6 +861,28 @@ void drawPLY(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuin
   glUniformMatrix4fv(m4, 1, GL_FALSE, (float*) world2eye);   // pass the w2e matrix 
   	
   	glDrawElements(GL_TRIANGLES, facecount*3, GL_UNSIGNED_INT, (char*)NULL+0); 
+
+}
+
+void drawPLY2(glm::mat4 local2clip, glm::mat4 local2eye, float* world2eye,  GLuint c0, GLuint c1,
+		   GLuint c2, GLuint m1, GLuint m2, GLuint m3, GLuint m4)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, vboHandle[2]); 
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO[2]);
+	glEnableVertexAttribArray(c1);
+	glVertexAttribPointer(c0,4,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+0);  // position 
+	glVertexAttribPointer(c2,4,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+16); // normal
+	glVertexAttribPointer(c1,3,GL_FLOAT, GL_FALSE, sizeof(VertexWithTex),(char*) NULL+48); // texture
+
+  glm::mat4 normal_matrix = glm::inverse(local2eye);
+  normal_matrix = glm::transpose(normal_matrix);
+
+  glUniformMatrix4fv(m1, 1, GL_FALSE, (float*) &local2clip[0][0]);   // pass the local2clip matrix
+  glUniformMatrix4fv(m2, 1, GL_FALSE, (float*) &local2eye[0][0]);   // pass the local2eye matrix
+  glUniformMatrix4fv(m3, 1, GL_FALSE, (float*) &normal_matrix[0][0]);   // pass the normal matrix
+  glUniformMatrix4fv(m4, 1, GL_FALSE, (float*) world2eye);   // pass the w2e matrix 
+  	
+  	glDrawElements(GL_TRIANGLES, facecount2*3, GL_UNSIGNED_INT, (char*)NULL+0); 
 
 }
 
@@ -829,7 +939,7 @@ void display()
   glEnableVertexAttribArray(c0);
   glEnableVertexAttribArray(c2);
 
-  glm::mat4 view = glm::lookAt(glm::vec3(5, 5, 0.2), 
+  glm::mat4 view = glm::lookAt(glm::vec3(-10,10,0), 
                                glm::vec3(0.0, 0.0, 0.0), 
                                glm::vec3(0.0, 0.0, 1.0));
   
@@ -846,36 +956,74 @@ void display()
   glm::mat4 mv;
   glm::mat4 cubeM = model, plyM = model;
   int tex_loc;
+  int tex_loc2;
 
+
+  //BOX
+  texture=2; //mirror surface
+
+  glUniform1i(tt, texture);
+   tex_loc2 = glGetUniformLocation(programObject, "CUBE2");
+  glUniform1i(tex_loc2,1);
+  glUniform4f(Kd, 1, 1, 1, 1);  
+  
+
+  plyM = glm::translate(plyM,glm::vec3(0.0, 0.0, -10));
+  plyM = glm::scale(plyM, glm::vec3(15, 15, 12));
+  mvp = projection*view*plyM;
+  mv = view*plyM;
+   draw_cube(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4); 
 
   //PLY
-  texture=0;
+  texture=-1; //color surface
+
+  glUniform1i(tt, texture);
+   tex_loc = glGetUniformLocation(programObject, "CUBE");
+  glUniform1i(tex_loc,0);
   glUniform4f(Kd, 0, 0, 1, 1);  
-  
-  plyM = glm::translate(plyM,glm::vec3(-1.0, -1.0, 0.0));
+  plyM = model;
+  plyM = glm::translate(plyM,glm::vec3(-2.0, -2.0,-5.0));
   plyM = glm::rotate(plyM, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
   plyM = glm::rotate(plyM, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); 
-  plyM = glm::scale(plyM, glm::vec3(10.0, 10.0, 10.0));
+  plyM = glm::scale(plyM, glm::vec3(20.0, 20.0, 20.0));
   mvp = projection*view*plyM;
   mv = view*plyM;
    drawPLY(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
+  plyM = glm::translate(plyM,glm::vec3(0, 0.0, 0.2));
+  mvp = projection*view*plyM;
+  mv = view*plyM;
+  glUniform4f(Kd, 1, 0, 0, 1);  
+   drawPLY2(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
+  plyM = glm::translate(plyM,glm::vec3(0, 0.0, -0.2));
 
 
+
+
+   texture=0; // mirror surface
+
+
+  glUniform1i(tt, texture);
+   tex_loc = glGetUniformLocation(programObject, "CUBE");
+  glUniform1i(tex_loc,0);
   glUniform4f(Kd, 0, 1, 1, 1);  
   plyM = glm::translate(plyM,glm::vec3(0.3, 0.0, 0.0));
   mvp = projection*view*plyM;
   mv = view*plyM;
    drawPLY(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
+  plyM = glm::translate(plyM,glm::vec3(0, 0.0, 0.2));
+  mvp = projection*view*plyM;
+  mv = view*plyM;
+   drawPLY2(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
 
 
   //draw_cube(mvp, mv, &view[0][0], c0, c1, c2, m1, m2, m3, m4);  
 
 ///
   // Skybox
-  texture = 1;
+  texture = 1; // cube 
 
   glUniform1i(tt, texture);
-   tex_loc = glGetUniformLocation(programObject, "Tex1");
+   tex_loc = glGetUniformLocation(programObject, "CUBE");
   glUniform1i(tex_loc,0);
 
 
@@ -1040,8 +1188,8 @@ void mykey(unsigned char key, int x, int y)
 int main(int argc, char** argv) 
 { 
   PlyFile* input;
-  FILE *realFile1 = fopen("bunny2.ply", "r");
-  FILE *realFile2 = fopen("dragon.ply", "r");
+  FILE *realFile1 = fopen("bunny.ply", "r");
+  FILE *realFile2 = fopen("dragon2.ply", "r");
 
   // get the ply structure and open the file
   input = read_ply(realFile1);
@@ -1053,6 +1201,17 @@ int main(int argc, char** argv)
 	    &vertexnormals, &facenormals);
   cout << "PLY Vertex: "<< vertexcount << endl;
   cout << "PLY Faces: "<< facecount << endl;
+
+  // get the ply structure and open the file
+  input = read_ply(realFile2);
+
+  // read in the data
+  store_ply(input, 
+	    &vertices2, &faces2, 
+	    &vertexcount2, &facecount2,
+	    &vertexnormals2, &facenormals2);
+  cout << "PLY2 Vertex: "<< vertexcount2 << endl;
+  cout << "PLY2 Faces: "<< facecount2 << endl;
 
   glutInit(&argc, argv); 
   glutInitDisplayMode(GLUT_RGB|GLUT_DOUBLE|GLUT_DEPTH); 
@@ -1068,10 +1227,12 @@ int main(int argc, char** argv)
 
   SQVBO();
   PLYVBO();
+  PLYVBO2();
   InitCube_VBO();
   programObject = SetupGLSL("lab5");  
   // INTtexture();
   MapVBO();
+  MapVBO2();
 
   glutMainLoop(); 
 

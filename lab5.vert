@@ -12,6 +12,9 @@ varying vec3 R;
 varying vec3 V;
 varying vec4 Vpos;
 
+varying vec3 reflectV;
+varying vec3 staticV;
+
 uniform mat4 local2clip;
 uniform mat4 local2eye;
 uniform mat4 normal_matrix;
@@ -29,7 +32,6 @@ uniform float mat_shine;
 
 
 
-
 void main(){
 
 
@@ -43,5 +45,9 @@ void main(){
 
        R = normalize(reflect(-L, N)); 
        V = normalize(vec3(-Lpos)); 
+       gl_Position = local2clip * position;
        texC = tex;
+
+       reflectV = reflect(vec3(position - Vpos), N);
+       staticV = reflect(V, N);
 }
