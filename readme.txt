@@ -1,4 +1,6 @@
-//How to run?
+///////////////
+//How to run?//
+///////////////
 
 Just run ./DoIt.sh
 
@@ -6,7 +8,22 @@ it will delete the existing lab5 executable and compile a new one.
 
 I use my own ply because I generated the nx,ny,nz for it. Please use my version of PLYs!
 
-//What have I done?
+////////
+//PLYs//
+////////
+
+The sumbit system has filesize limit, so I cannot carry the PLYs.
+Please download from my github and place them at the same directory.
+
+bunny2.ply
+- https://github.com/worm6206/lab5/raw/master/bunny2.ply
+
+dragon2.ply
+- https://github.com/worm6206/lab5/raw/master/dragon2.ply
+
+/////////////////////
+//What have I done?//
+/////////////////////
 
 * PLY models
 	- read/draw PLY model
